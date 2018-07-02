@@ -32,7 +32,7 @@ Write your logic in `app.rb` like...
 require 'mobb'
 
 set :name, "example bot"
-'
+
 on "hello" do
   "hi! i'm #{settings.name}!"
 end
