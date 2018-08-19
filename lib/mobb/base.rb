@@ -169,6 +169,11 @@ module Mobb
         method
       end
 
+      def helpers(*extensions, &block)
+        class_eval(&block)   if block_given?
+        include(*extensions) if extensions.any?
+      end
+
       def development?; environment == :development; end
       def production?; environment == :production; end
       def test?; environment == :test; end
@@ -343,7 +348,8 @@ module Mobb
     end
 
     delegate :receive, :on, #:every,
-      :set, :enable, :disable, :clear
+      :set, :enable, :disable, :clear,
+      :helpers
 
     class << self
       attr_accessor :target
