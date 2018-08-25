@@ -227,6 +227,12 @@ module Mobb
         @conditions << generate_method(name, &block)
       end
 
+      def ignore_bot(cond)
+        condition do
+          @env.bot? != cond
+        end
+      end
+
       def enable(*options) options.each { |option| set(option, true) }; end
       def disable(*options) options.each { |option| set(option, false) }; end
       def clear(*options) options.each { |option| set(option, nil) }; end
