@@ -92,8 +92,8 @@ module Mobb
 
     def handle_event(base = settings, passed_block = nil)
       if responds = base.events[@env.event_type]
-        responds.each do |pattern, block|
-          process_event(pattern) do |*args|
+        responds.each do |pattern, block, conditions|
+          process_event(pattern, conditions) do |*args|
             event_eval { block[*args] }
           end
         end
@@ -103,15 +103,19 @@ module Mobb
       nil
     end
 
-    def process_event(pattern, block = nil, values = [])
+    def process_event(pattern, conditions, block = nil, values = [])
       res = pattern.match?(@env.body)
-      case res
-      when ::Mobb::Matcher::Matched
-        yield(self, *(res.matched))
-      when TrueClass
-        yield self
-      else
-        nil
+      catch(:pass) do
+        conditions.each { |c| throw :pass unless c.bind(self).call }
+
+        case res
+        when ::Mobb::Matcher::Matched
+          yield(self, *(res.matched))
+        when TrueClass
+          yield self
+        else
+          nil
+        end
       end
     end
 
@@ -136,6 +140,7 @@ module Mobb
 
       def reset!
         @events = {}
+        @conditions = []
       end
 
       def settings
@@ -151,13 +156,17 @@ module Mobb
         (@events[type] ||= []) << compile!(type, pattern, options, &block)
       end
 
-      def compile!(type, pattern, option, &block)
-        matcher = compile(pattern, option)
+      def compile!(type, pattern, options, &block)
+        options.each_pair { |option, args| send(option, *args) }
+
+        matcher = compile(pattern, options)
         unbound_method = generate_method("#{type}", &block)
+        conditions, @conditions = @conditions, []
         wrapper = block.arity != 0 ?
           proc { |instance, args| unbound_method.bind(instance).call(*args) } :
           proc { |instance, args| unbound_method.bind(instance).call }
-        [matcher, wrapper]
+
+        [ matcher, wrapper, conditions ]
       end
 
       def compile(pattern, options) Matcher.new(pattern, options); end
@@ -212,6 +221,22 @@ module Mobb
         define_singleton(option, getter)
         define_singleton("#{option}?", "!!#{option}") unless method_defined?("#{option}?")
         self
+      end
+
+      def condition(name = "#{caller.first[/`.*'/]} condition", &block)
+        @conditions << generate_method(name, &block)
+      end
+
+      def ignore_bot(cond)
+        condition do
+          @env.bot? != cond
+        end
+      end
+
+      def reply_to_me(cond)
+        condition do
+          @env.reply_to.include?(settings.name) == cond
+        end
       end
 
       def enable(*options) options.each { |option| set(option, true) }; end
