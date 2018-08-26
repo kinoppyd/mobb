@@ -233,6 +233,12 @@ module Mobb
         end
       end
 
+      def reply_to_me(cond)
+        condition do
+          @env.reply_to.include?(settings.name) == cond
+        end
+      end
+
       def enable(*options) options.each { |option| set(option, true) }; end
       def disable(*options) options.each { |option| set(option, false) }; end
       def clear(*options) options.each { |option| set(option, nil) }; end
