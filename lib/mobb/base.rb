@@ -92,9 +92,12 @@ module Mobb
 
     def handle_event(base = settings, passed_block = nil)
       if responds = base.events[@env.event_type]
-        responds.each do |pattern, block, conditions|
-          process_event(pattern, conditions) do |*args|
-            event_eval { block[*args] }
+        responds.each do |pattern, block, before_conditions, after_conditions|
+          process_event(pattern, before_conditions) do |*args|
+            event_eval do
+              res = block[*args]
+              after_conditions.inject(res) { |acc, c| c.bind(self).call(acc) }
+            end
           end
         end
       end
@@ -140,7 +143,8 @@ module Mobb
 
       def reset!
         @events = {}
-        @conditions = []
+        @before_conditions = []
+        @after_conditions = []
       end
 
       def settings
@@ -161,12 +165,13 @@ module Mobb
 
         matcher = compile(pattern, options)
         unbound_method = generate_method("#{type}", &block)
-        conditions, @conditions = @conditions, []
+        before_conditions, @before_conditions = @before_conditions, []
+        after_conditions, @after_conditions = @after_conditions, []
         wrapper = block.arity != 0 ?
           proc { |instance, args| unbound_method.bind(instance).call(*args) } :
           proc { |instance, args| unbound_method.bind(instance).call }
 
-        [ matcher, wrapper, conditions ]
+        [ matcher, wrapper, before_conditions, after_conditions ]
       end
 
       def compile(pattern, options) Matcher.new(pattern, options); end
@@ -224,7 +229,18 @@ module Mobb
       end
 
       def condition(name = "#{caller.first[/`.*'/]} condition", &block)
-        @conditions << generate_method(name, &block)
+        @before_conditions << generate_method(name, &block)
+      end
+      alias :before_condition :condition
+
+      def after_condition(name = "#{caller.first[/`.*'/]} condition", &block)
+        @after_conditions << generate_method(name) do |res|
+          if String === res
+            res = [res, {}]
+          end
+          block.call(res)
+          res
+        end
       end
 
       def ignore_bot(cond)
@@ -236,6 +252,12 @@ module Mobb
       def reply_to_me(cond)
         condition do
           @env.reply_to.include?(settings.name) == cond
+        end
+      end
+
+      def dest_to(channel)
+        after_condition do |res|
+          res.last[:dest_channel] = channel
         end
       end
 
