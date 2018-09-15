@@ -1,20 +1,24 @@
 require 'repp'
+require 'whenever'
+require 'parse-cron'
+
 require "mobb/version"
 
 module Mobb
   class Matcher
-    def initialize(pattern, options) @pattern, @options = pattern, options; end
+    def initialize(pattern, options = {}) @pattern, @options = pattern, options; end
     def regexp?; pattern.is_a?(Regexp); end
     def inspect; "pattern: #{@pattern}, options #{@options}"; end
-    def invoke(time = Time.now) @options[:last_invoked] = time; end
+    def cron?; pattern.is_a?(CronParser); end
+    def tick(time = Time.now) @options[:last_tick] = time; end
+    def last_tick; @options[:last_tick] end
 
     def match?(context)
       case context
       when String
         string_matcher(context)
       when Time
-        # TODO: do something
-        false
+        cron_matcher(context)
       when Array
         context.all? { |c| match?(c) }
       else
@@ -43,6 +47,13 @@ module Mobb
         false
       end
     end
+
+    def cron_matcher(time)
+      last = last_tick
+      tick(time) if !last || time > last
+      return false if time < last
+      pattern.next(time) == pattern.next(last) ? false : true
+    end
   end
 
   class Base
@@ -50,18 +61,10 @@ module Mobb
       dup.call!(env)
     end
 
-    def tick(env)
-      dup.tick!(env)
-    end
-
     def call!(env)
       @env = env
       invoke { dispatch! }
       [@body, @attachments]
-    end
-
-    def tick!(env)
-      fail # TODO: write logic here
     end
 
     def dispatch!
@@ -154,16 +157,24 @@ module Mobb
       def receive(pattern, options = {}, &block) event(:message, pattern, options, &block); end
       alias :on :receive
 
-      #def every(pattern, options = {}, &block) event(:cron, pattern, options, &block); end
+      def every(pattern, options = {}, &block) event(:ticker, pattern, options, &block); end
+
+      def cron(pattern, options = {}, &block) event(:ticker, pattern, options, &block); end
 
       def event(type, pattern, options, &block)
         (@events[type] ||= []) << compile!(type, pattern, options, &block)
       end
 
       def compile!(type, pattern, options, &block)
+        at = options.delete(:at)
         options.each_pair { |option, args| send(option, *args) }
 
-        matcher = compile(pattern, options)
+        matcher = case type
+                  when :message
+                    compile(pattern, options)
+                  when :ticker
+                    compile_cron(pattern, at)
+                  end
         unbound_method = generate_method("#{type}", &block)
         before_conditions, @before_conditions = @before_conditions, []
         after_conditions, @after_conditions = @after_conditions, []
@@ -175,6 +186,14 @@ module Mobb
       end
 
       def compile(pattern, options) Matcher.new(pattern, options); end
+
+      def compile_cron(time, at)
+        if String === time
+          Matcher.new(CronParser.new(time))
+        else
+          Matcher.new(CronParser.new(Whenever::Output::Cron.new(time, nil, at).time_in_cron_syntax))
+        end
+      end
 
       def generate_method(name, &block)
         define_method(name, &block)
@@ -394,7 +413,7 @@ module Mobb
       end
     end
 
-    delegate :receive, :on, #:every,
+    delegate :receive, :on, :every, :cron,
       :set, :enable, :disable, :clear,
       :helpers
 
