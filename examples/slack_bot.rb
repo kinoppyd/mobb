@@ -9,15 +9,16 @@ end
 
 # Warning this is bad implementation
 # inifinity loop happend
-receive "Yo", laziness: true do
-  "Yo"
-end
+# TODO: now broken
+#receive "Yo", laziness: true do
+#  "Yo"
+#end
 
 receive /hey (\w+)/ do |someone|
   "hey #{someone}, waz up?"
 end
 
-# This function is not implements yet
-#every 1.day, at: '15:30', exclude: :holiday do
-#  'Stund up daily meeting time!'
-#end
+# Need dest_to condition to cron/every task
+every :day, at: '12:30', dest_to: 'times_kinoppyd' do
+  'Stund up daily meeting time!'
+end
