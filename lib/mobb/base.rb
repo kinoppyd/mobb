@@ -95,11 +95,11 @@ module Mobb
 
     def handle_event(base = settings, passed_block = nil)
       if responds = base.events[@env.event_type]
-        responds.each do |pattern, block, before_conditions, after_conditions|
-          process_event(pattern, before_conditions) do |*args|
+        responds.each do |pattern, block, source_conditions, dest_conditions|
+          process_event(pattern, source_conditions) do |*args|
             event_eval do
               res = block[*args]
-              after_conditions.inject(res) { |acc, c| c.bind(self).call(acc) }
+              dest_conditions.inject(res) { |acc, c| c.bind(self).call(acc) }
             end
           end
         end
@@ -146,8 +146,8 @@ module Mobb
 
       def reset!
         @events = {}
-        @before_conditions = []
-        @after_conditions = []
+        @source_conditions = []
+        @dest_conditions = []
       end
 
       def settings
@@ -176,13 +176,13 @@ module Mobb
                     compile_cron(pattern, at)
                   end
         unbound_method = generate_method("#{type}", &block)
-        before_conditions, @before_conditions = @before_conditions, []
-        after_conditions, @after_conditions = @after_conditions, []
+        source_conditions, @source_conditions = @source_conditions, []
+        dest_conditions, @dest_conditions = @dest_conditions, []
         wrapper = block.arity != 0 ?
           proc { |instance, args| unbound_method.bind(instance).call(*args) } :
           proc { |instance, args| unbound_method.bind(instance).call }
 
-        [ matcher, wrapper, before_conditions, after_conditions ]
+        [ matcher, wrapper, source_conditions, dest_conditions ]
       end
 
       def compile(pattern, options) Matcher.new(pattern, options); end
@@ -248,12 +248,12 @@ module Mobb
       end
 
       def condition(name = "#{caller.first[/`.*'/]} condition", &block)
-        @before_conditions << generate_method(name, &block)
+        @source_conditions << generate_method(name, &block)
       end
-      alias :before_condition :condition
+      alias :source_condition :condition
 
-      def after_condition(name = "#{caller.first[/`.*'/]} condition", &block)
-        @after_conditions << generate_method(name) do |res|
+      def dest_condition(name = "#{caller.first[/`.*'/]} condition", &block)
+        @dest_conditions << generate_method(name) do |res|
           if String === res
             res = [res, {}]
           end
@@ -275,7 +275,7 @@ module Mobb
       end
 
       def dest_to(channel)
-        after_condition do |res|
+        dest_condition do |res|
           res.last[:dest_channel] = channel
         end
       end
