@@ -148,6 +148,15 @@ module Mobb
         @events = {}
         @source_conditions = []
         @dest_conditions = []
+        @extensions = []
+      end
+
+      def extensions
+        if superclass.respond_to?(:extensions)
+          (@extensions + superclass.extensions).uniq
+        else
+          @extensions
+        end
       end
 
       def settings
@@ -162,7 +171,14 @@ module Mobb
       def cron(pattern, options = {}, &block) event(:ticker, pattern, options, &block); end
 
       def event(type, pattern, options, &block)
-        (@events[type] ||= []) << compile!(type, pattern, options, &block)
+        signature = compile!(type, pattern, options, &block)
+        (@events[type] ||= []) << signature
+        invoke_hook(:event_added, type, pattern, block)
+        signature
+      end
+
+      def invoke_hook(name, *args)
+        extensions.each { |e| e.send(name, *args) if e.respond_to?(name) }
       end
 
       def compile!(type, pattern, options, &block)
@@ -205,6 +221,15 @@ module Mobb
       def helpers(*extensions, &block)
         class_eval(&block)   if block_given?
         include(*extensions) if extensions.any?
+      end
+
+      def register(*extensions, &block)
+        extensions << Module.new(&block) if block_given?
+        @extensions += extensions
+        extensions.each do |extension|
+          extend extension
+          extension.registered(self) if extension.respond_to?(:registered)
+        end
       end
 
       def development?; environment == :development; end
@@ -402,7 +427,7 @@ module Mobb
     end
   end
 
-  module Delegator #:nodoc:
+  module Delegator
     def self.delegate(*methods)
       methods.each do |method_name|
         define_method(method_name) do |*args, &block|
@@ -415,7 +440,7 @@ module Mobb
 
     delegate :receive, :on, :every, :cron,
       :set, :enable, :disable, :clear,
-      :helpers
+      :helpers, :register
 
     class << self
       attr_accessor :target
