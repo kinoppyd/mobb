@@ -166,9 +166,8 @@ module Mobb
       def receive(pattern, options = {}, &block) event(:message, pattern, options, &block); end
       alias :on :receive
 
-      def every(pattern, options = {}, &block) event(:ticker, pattern, options, &block); end
-
       def cron(pattern, options = {}, &block) event(:ticker, pattern, options, &block); end
+      alias :every :cron
 
       def event(type, pattern, options, &block)
         signature = compile!(type, pattern, options, &block)
