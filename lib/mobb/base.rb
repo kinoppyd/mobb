@@ -447,4 +447,26 @@ module Mobb
 
     self.target = Application
   end
+
+  # Create a new Mobb application; the block is evaluated in the class scope.
+  def self.new(base = Base, &block)
+    base = Class.new(base)
+    base.class_eval(&block) if block_given?
+    base
+  end
+
+  # Extend the top-level DSL with the modules provided.
+  def self.register(*extensions, &block)
+    Delegator.target.register(*extensions, &block)
+  end
+
+  # Include the helper modules provided in Mobb's request context.
+  def self.helpers(*extensions, &block)
+    Delegator.target.helpers(*extensions, &block)
+  end
+
+  # Use the middleware for classic applications.
+  def self.use(*args, &block)
+    Delegator.target.use(*args, &block)
+  end
 end
