@@ -71,11 +71,15 @@ module Mobb
       # TODO: encode input messages
 
       invoke do
-        # TODO: before filters
+        filter! :before
         handle_event
       end
     ensure
-      # TODO: after fillters
+      begin
+        filter! :after
+      rescue ::Exception => boom
+        # TODO: invoke { handle_exception!(boom) }
+      end
     end
 
     def invoke
@@ -91,6 +95,17 @@ module Mobb
         @attachments = res
       end
       nil
+    end
+
+    def filter!(type, base = settings)
+      filter! type, base.superclass if base.superclass.respond_to?(:filters)
+      base.filters[type].each { |signature|
+        # TODO: Refactor compile! and process_event to change conditions in a hash (e,g, { source_cond: [], dest_cond: [] })
+        pattern = signature.first
+        source_conditions = signature[2]
+        wrapper = signature[1]
+        process_event(pattern, source_conditions, wrapper)
+      }
     end
 
     def handle_event(base = settings, passed_block = nil)
@@ -116,9 +131,9 @@ module Mobb
 
         case res
         when ::Mobb::Matcher::Matched
-          yield(self, *(res.matched))
+          block ? block[self, *(res.matched)] : yield(self, *(res.matched))
         when TrueClass
-          yield self
+          block ? block[self] : yield(self)
         else
           nil
         end
@@ -142,10 +157,11 @@ module Mobb
         /src\/kernel\/bootstrap\/[A-Z]/                     # maglev kernel files
       ]
 
-      attr_reader :events
+      attr_reader :events, :filters
 
       def reset!
         @events = {}
+        @filters = { before: [], after: [] }
         @source_conditions = []
         @dest_conditions = []
         @extensions = []
@@ -161,6 +177,18 @@ module Mobb
 
       def settings
         self
+      end
+
+      def before(pattern = /.*/, **options, &block)
+        add_filter(:before, pattern, options, &block)
+      end
+
+      def after(pattern = /.*/, **options, &block)
+        add_filter(:after, pattern, options, &block)
+      end
+
+      def add_filter(type, pattern = /.*/, **options, &block)
+        filters[type] << compile!(type, pattern, options, &block)
       end
 
       def receive(pattern, options = {}, &block) event(:message, pattern, options, &block); end
@@ -189,6 +217,8 @@ module Mobb
                     compile(pattern, options)
                   when :ticker
                     compile_cron(pattern, at)
+                  else
+                    compile(pattern, options)
                   end
         unbound_method = generate_method("#{type}", &block)
         source_conditions, @source_conditions = @source_conditions, []
@@ -438,7 +468,7 @@ module Mobb
     end
 
     delegate :receive, :on, :every, :cron,
-      :set, :enable, :disable, :clear,
+      :set, :enable, :disable, :clear, :before, :after,
       :helpers, :register
 
     class << self
