@@ -3,6 +3,20 @@ require 'mobb'
 set :service, 'slack'
 set :name, "example bot"
 
+before do
+  puts "=========="
+  puts "before filter"
+  puts @env.body
+  puts "=========="
+end
+
+after do
+  puts "=========="
+  puts "after filter"
+  puts @body
+  puts "=========="
+end
+
 on "hello" do
   "Hi! I'm #{settings.name}"
 end
