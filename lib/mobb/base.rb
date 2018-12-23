@@ -63,8 +63,11 @@ module Mobb
 
     def call!(env)
       @env = env
+      @body = nil
+      @repp_options = {}
+      @attachments = {}
       invoke { dispatch! }
-      [@body, @attachments]
+      [@body, @repp_options, @attachments]
     end
 
     def dispatch!
