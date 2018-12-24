@@ -157,6 +157,13 @@ module Mobb
         /src\/kernel\/bootstrap\/[A-Z]/                     # maglev kernel files
       ]
 
+      DEFAULT_CONDITIONS = {
+        :message => {
+          :react_to_bot => false,
+          :include_myself => false
+        }
+      }
+
       attr_reader :events, :filters
 
       def reset!
@@ -210,6 +217,8 @@ module Mobb
 
       def compile!(type, pattern, options, &block)
         at = options.delete(:at)
+
+        options = DEFAULT_CONDITIONS[type].merge(options)
         options.each_pair { |option, args| send(option, *args) }
 
         matcher = case type
@@ -316,9 +325,17 @@ module Mobb
         end
       end
 
-      def ignore_bot(cond)
-        condition do
-          @env.bot? != cond
+      def react_to_bot(cond)
+        source_condition do
+          return true if !@env.respond_to?(:bot?) || cond
+          !@env.bot?
+        end
+      end
+
+      def include_myself(cond)
+        source_condition do
+          return true if !@env.respond_to?(:user) || cond
+          @env.user.name != settings.name
         end
       end
 
