@@ -71,17 +71,19 @@ end
 
 ## Conditions
 
-You can use conditions `ignore_bot` and `reply_to_me`.
+You can use conditions `react_to_bot`, `include_myself` and `reply_to_me`.
 
 ```ruby
 require 'mobb'
 set :service, 'slack'
 
-# You must set `ignore_bot` true when response same message
-on 'Yo', ignore_bot: true do
+# Mobb ignore all bot messages, but when set reply_to_bot true, Mobb react all bot messages
+# this example will act infinit loop when receive message 'Yo'
+on 'Yo', reply_to_bot: true do
   'Yo'
 end
 
+# This block react only message reply to bot
 on /Hi/, reply_to_me: true do
   "Hi #{@env.user.name}"
 end
