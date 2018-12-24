@@ -106,6 +106,31 @@ on /Yo/, reply_to_me: true do
 end
 ```
 
+# Chain methods
+
+If you want to act heavy task your bot, you can use chain/trigger syntax.
+
+```ruby
+require 'mobb'
+
+on 'taks start (\w+)' do |name|
+  chain 'heavy task1', 'heavy task2', name: name
+  'start!'
+end
+
+trigger 'heavy task1' do
+  payload = @env.payload
+  sleep 19
+  "task1 #{payload[:name]} done!"
+end
+
+trigger 'heavy task1' do
+  payload = @env.payload
+  sleep 30
+  "task2 #{payload[:name]} done!"
+end
+```
+
 # Service handlers
 
 Mobb is implemented based on [Repp](https://github.com/kinoppyd/repp) Interface.
