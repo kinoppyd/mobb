@@ -316,12 +316,6 @@ module Mobb
         end
       end
 
-      def ignore_bot(cond)
-        condition do
-          @env.bot? != cond
-        end
-      end
-
       def reply_to_me(cond)
         condition do
           @env.reply_to.include?(settings.name) == cond
