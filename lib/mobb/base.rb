@@ -63,8 +63,11 @@ module Mobb
 
     def call!(env)
       @env = env
+      @body = nil
+      @repp_options = {}
+      @attachments = {}
       invoke { dispatch! }
-      [@body, @attachments]
+      [@body, @repp_options, @attachments]
     end
 
     def dispatch!
@@ -142,6 +145,11 @@ module Mobb
 
     def event_eval; throw :halt, yield; end
 
+    def chain(*args)
+      payload = args.last.instance_of?(Hash) ? args.pop : nil
+      @repp_options[:trigger] = { names: args, payload: payload }
+    end
+
     def settings
       self.class.settings
     end
@@ -204,6 +212,8 @@ module Mobb
       def cron(pattern, options = {}, &block) event(:ticker, pattern, options, &block); end
       alias :every :cron
 
+      def trigger(name, options = {}, &block) event(:trigger, name, options, &block); end
+
       def event(type, pattern, options, &block)
         signature = compile!(type, pattern, options, &block)
         (@events[type] ||= []) << signature
@@ -226,6 +236,8 @@ module Mobb
                     compile(pattern, options)
                   when :ticker
                     compile_cron(pattern, at)
+                  when :trigger
+                    compile(pattern, options)
                   else
                     compile(pattern, options)
                   end
