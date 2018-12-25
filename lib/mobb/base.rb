@@ -516,7 +516,7 @@ module Mobb
       end
     end
 
-    delegate :receive, :on, :every, :cron,
+    delegate :receive, :on, :every, :cron, :trigger,
       :set, :enable, :disable, :clear, :before, :after,
       :helpers, :register
 
