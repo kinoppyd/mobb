@@ -159,6 +159,10 @@ module Mobb
 
     def say_nothing; @silent = true; end
 
+    def pass(&block)
+      throw :pass, block
+    end
+
     def settings
       self.class.settings
     end
