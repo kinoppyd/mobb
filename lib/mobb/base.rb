@@ -27,8 +27,8 @@ module Mobb
     end
 
     class Matched
-      attr_reader :pattern, :matched
-      def initialize(pattern, matched) @pattern, @matched = pattern, matched; end
+      attr_reader :pattern, :matched, :captures
+      def initialize(pattern, matched) @pattern, @matched, @captures = pattern, matched, matched.captures; end
     end
 
     def pattern; @pattern; end
@@ -37,7 +37,7 @@ module Mobb
       case pattern
       when Regexp
         if res = pattern.match(string)
-          Matched.new(pattern, res.captures)
+          Matched.new(pattern, res)
         else
           false
         end
@@ -57,6 +57,8 @@ module Mobb
   end
 
   class Base
+    attr_reader :matched
+
     def call(env)
       dup.call!(env)
     end
@@ -66,6 +68,7 @@ module Mobb
       @body = nil
       @repp_options = {}
       @attachments = {}
+      @matched = nil
       invoke { dispatch! }
       [@body, @repp_options, @attachments]
     end
@@ -134,7 +137,8 @@ module Mobb
 
         case res
         when ::Mobb::Matcher::Matched
-          block ? block[self, *(res.matched)] : yield(self, *(res.matched))
+          @matched = res.matched
+          block ? block[self, *(res.captures)] : yield(self, *(res.captures))
         when TrueClass
           block ? block[self] : yield(self)
         else
