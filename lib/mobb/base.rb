@@ -69,7 +69,10 @@ module Mobb
       @repp_options = {}
       @attachments = {}
       @matched = nil
+      @silent = false
       invoke { dispatch! }
+
+      @body = nil if @silent
       [@body, @repp_options, @attachments]
     end
 
@@ -153,6 +156,8 @@ module Mobb
       payload = args.last.instance_of?(Hash) ? args.pop : nil
       @repp_options[:trigger] = { names: args, payload: payload }
     end
+
+    def say_nothing; @silent = true; end
 
     def settings
       self.class.settings
@@ -358,6 +363,12 @@ module Mobb
       def reply_to_me(cond)
         condition do
           @env.reply_to.include?(settings.name) == cond
+        end
+      end
+
+      def silent(cond)
+        dest_condition do |res|
+          res[0] = nil if cond
         end
       end
 
