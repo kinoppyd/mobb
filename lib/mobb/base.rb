@@ -241,7 +241,8 @@ module Mobb
       def compile!(type, pattern, options, &block)
         at = options.delete(:at)
 
-        options = DEFAULT_CONDITIONS[type].merge(options)
+        defaults = DEFAULT_CONDITIONS[type]
+        options = defaults ? defaults.merge(options) : options
         options.each_pair { |option, args| send(option, *args) }
 
         matcher = case type
