@@ -19,7 +19,7 @@ Gem::Specification.new do |spec|
   end
   spec.require_paths = ["lib"]
 
-  spec.add_dependency "repp", "~> 0.3"
+  spec.add_dependency "repp", "~> 0.4"
   spec.add_dependency "whenever", "~> 0.10"
   spec.add_dependency "parse-cron", "~> 0.1"
 
