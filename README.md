@@ -131,6 +131,25 @@ trigger 'heavy task1' do
 end
 ```
 
+# Pass
+
+You can pass block to use pass keyword
+
+```ruby
+require 'mobb'
+
+on 'yo' do
+  $stderr.puts 'this block will be pass'
+  pass
+  'this value never evaluted'
+end
+
+on 'yo' do
+  $stderr.puts 'catch!'
+  'yo'
+end
+```
+
 # Service handlers
 
 Mobb is implemented based on [Repp](https://github.com/kinoppyd/repp) Interface.
