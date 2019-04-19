@@ -141,7 +141,7 @@ module Mobb
         case res
         when ::Mobb::Matcher::Matched
           @matched = res.matched
-          block ? block[self, *(res.captures)] : yield(self, *(res.captures))
+          block ? block[self, res.captures] : yield(self, res.captures)
         when TrueClass
           block ? block[self] : yield(self)
         else
