@@ -79,7 +79,7 @@ set :service, 'slack'
 
 # Mobb ignore all bot messages, but when set reply_to_bot true, Mobb react all bot messages
 # this example will act infinit loop when receive message 'Yo'
-on 'Yo', reply_to_bot: true do
+on 'Yo', react_to_bot: true do
   'Yo'
 end
 
