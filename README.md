@@ -113,7 +113,7 @@ If you want to act heavy task your bot, you can use chain/trigger syntax.
 ```ruby
 require 'mobb'
 
-on /taks start (\w+)/ do |name|
+on /task start (\w+)/ do |name|
   chain 'heavy task1', 'heavy task2', name: name
   'start!'
 end
